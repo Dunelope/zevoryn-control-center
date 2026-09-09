@@ -1,0 +1,1 @@
+export function ComingSoon({ title }: { title: string }) { return <section className="card"><h2>{title}</h2><p className="muted">This module is reserved for a future roadmap milestone.</p></section>; }
