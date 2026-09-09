@@ -15,6 +15,12 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Set `ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API`, `ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_ID`, and `ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_SECRET` in the host environment before starting Compose. Verify only whether they are present in the API container:
+
+```bash
+docker compose exec api sh -c 'for name in ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_ID ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_SECRET; do if printenv "$name" >/dev/null 2>&1; then echo "$name: PRESENT"; else echo "$name: MISSING"; fi; done'
+```
+
 Open http://localhost:5173. API: http://localhost:5080. Live hub: http://localhost:5080/hubs/control-events. PostgreSQL is exposed on port 5442.
 
 ## Local backend

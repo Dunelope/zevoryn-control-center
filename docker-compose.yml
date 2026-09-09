@@ -15,6 +15,9 @@ services:
       ConnectionStrings__ControlDatabase: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-zevoryn_control};Username=${POSTGRES_USER:-zevoryn};Password=${POSTGRES_PASSWORD:-local-development-only}"
       Cors__Origins__0: "http://localhost:${FRONTEND_PORT:-5173}"
       Database__ApplyMigrations: "true"
+      ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API: "${ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API:?Set ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API for the CleanersFlow staging integration}"
+      ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_ID: "${ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_ID:?Set ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_ID for the CleanersFlow staging integration}"
+      ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_SECRET: "${ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_SECRET:?Set ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CF_ACCESS_CLIENT_SECRET for the CleanersFlow staging integration}"
     ports: ["${API_PORT:-5080}:8080"]
     depends_on: { postgres: { condition: service_healthy } }
   frontend:
