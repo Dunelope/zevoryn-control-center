@@ -1,10 +1,25 @@
 import type { BetaCampaign, BetaInvitation, EnvironmentHealthCheckResult, Product, ProductConnection, ProductEnvironment, SaaSEvent } from './types';
 
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5080';
+const enumNames: Record<string, string[]> = {
+  productStatus: ['Active', 'Inactive'],
+  environmentStatus: ['Unknown', 'Healthy', 'Degraded', 'Offline'],
+  environmentType: ['Development', 'Staging', 'Production'],
+  connectionType: ['InternalApi', 'HealthEndpoint'],
+  betaCampaignStatus: ['Draft', 'Active', 'Paused', 'Closed'],
+  betaInvitationStatus: ['Pending', 'Sent', 'Accepted', 'Revoked', 'Expired', 'Failed']
+};
+function enumName(value: unknown, names: string[]): unknown { return typeof value === 'number' && names[value] ? names[value] : value; }
+export function normalizeApiResponse(path: string, value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(item => normalizeApiResponse(path, item));
+  if (!value || typeof value !== 'object') return value;
+  const statusKind = path.includes('/beta/campaigns') ? (path.includes('/invitations') ? 'betaInvitationStatus' : 'betaCampaignStatus') : path.includes('/environments') || path.includes('health-check') ? 'environmentStatus' : 'productStatus';
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, key === 'status' ? enumName(item, enumNames[statusKind]) : key === 'environmentType' ? enumName(item, enumNames.environmentType) : key === 'connectionType' ? enumName(item, enumNames.connectionType) : item]));
+}
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, { headers: { 'Content-Type': 'application/json' }, ...init });
   if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(body.detail ?? 'Request failed'); }
-  return response.status === 204 ? undefined as T : response.json();
+  return response.status === 204 ? undefined as T : response.json().then(body => normalizeApiResponse(path, body) as T);
 }
 const json = (body: unknown): RequestInit => ({ method: 'POST', body: JSON.stringify(body) });
 export const api = {
