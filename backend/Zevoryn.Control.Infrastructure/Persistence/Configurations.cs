@@ -31,7 +31,7 @@ public sealed class ProductConnectionConfiguration : IEntityTypeConfiguration<Pr
 {
     public void Configure(EntityTypeBuilder<ProductConnection> b)
     {
-        b.ToTable("product_connections"); b.HasKey(x => x.Id); b.Property(x => x.ConnectionType).HasConversion<string>().HasMaxLength(32).IsRequired(); b.Property(x => x.SecretReference).HasMaxLength(200).IsRequired(); b.Property(x => x.LastError).HasMaxLength(2000); b.Property(x => x.IsEnabled).IsRequired(); b.HasIndex(x => x.ProductEnvironmentId); b.HasIndex(x => new { x.ProductEnvironmentId, x.ConnectionType }).IsUnique(); b.HasOne(x => x.ProductEnvironment).WithMany().HasForeignKey(x => x.ProductEnvironmentId).OnDelete(DeleteBehavior.Restrict);
+        b.ToTable("product_connections"); b.HasKey(x => x.Id); b.Property(x => x.ConnectionType).HasConversion<string>().HasMaxLength(32).IsRequired(); b.Property(x => x.SecretReference).HasMaxLength(200).IsRequired(); b.Property(x => x.AccessClientIdSecretReference).HasMaxLength(200); b.Property(x => x.AccessClientSecretSecretReference).HasMaxLength(200); b.Property(x => x.LastError).HasMaxLength(2000); b.Property(x => x.IsEnabled).IsRequired(); b.HasIndex(x => x.ProductEnvironmentId); b.HasIndex(x => new { x.ProductEnvironmentId, x.ConnectionType }).IsUnique(); b.HasOne(x => x.ProductEnvironment).WithMany().HasForeignKey(x => x.ProductEnvironmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 public sealed class BetaCampaignConfiguration : IEntityTypeConfiguration<BetaCampaign>
