@@ -61,10 +61,12 @@ docker-compose.yml       postgres, api, frontend
 
 ## Current routes
 
-Dashboard `/`, Products `/products`, Product detail `/products/:id`, Events `/events`, plus clearly marked placeholders for Monitoring, Beta, Customers, Billing, and AI Lab.
+Dashboard `/`, Products `/products`, Product detail `/products/:id`, Events `/events`, Beta `/beta`, and Beta campaign detail `/beta/campaigns/:id`, plus clearly marked placeholders for Monitoring, Customers, Billing, and AI Lab.
 
 Product deletion is intentionally a deactivation (`Inactive`) so future dependent data remains consistent. Environment deletion is hard deletion only when no ProductConnection exists; SaaSEvent environment references remain nullable. ProductConnection stores only a logical `SecretReference`, never credentials.
 
 Health checks use a five-second HttpClient timeout and request `{BaseUrl}/health`. Only HTTP/HTTPS URLs are accepted. This is a foundation, not a complete SSRF defense; deployed environments should add allowlists, private-network egress controls, and stronger URL/IP validation.
 
 No authentication, RBAC, customer data, billing, model execution, or direct external SaaS database access is implemented in this milestone.
+
+Beta Management is product-agnostic. Creating an invitation creates only a central orchestration record; it does not generate a token, send email, call CleanersFlow, or call Postmark. Active invitation capacity counts every invitation except `Revoked` and `Expired`; revoking an invitation frees capacity.

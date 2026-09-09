@@ -43,3 +43,19 @@ public sealed class ProductConnectionRepository(ControlDbContext db) : IProductC
     public Task DeleteAsync(ProductConnection connection, CancellationToken ct) { db.ProductConnections.Remove(connection); return Task.CompletedTask; }
     public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
 }
+public sealed class BetaCampaignRepository(ControlDbContext db) : IBetaCampaignRepository
+{
+    public async Task<IReadOnlyList<BetaCampaign>> GetAsync(Guid? productId, BetaCampaignStatus? status, CancellationToken ct) { var query = db.BetaCampaigns.AsNoTracking().Include(x => x.Invitations).AsQueryable(); if (productId is { } p) query = query.Where(x => x.ProductId == p); if (status is { } s) query = query.Where(x => x.Status == s); return await query.OrderByDescending(x => x.CreatedAtUtc).ToListAsync(ct); }
+    public Task<BetaCampaign?> GetByIdAsync(Guid id, CancellationToken ct) => db.BetaCampaigns.AsNoTracking().Include(x => x.Invitations).FirstOrDefaultAsync(x => x.Id == id, ct);
+    public Task<BetaCampaign?> GetByIdForUpdateAsync(Guid id, CancellationToken ct) => db.BetaCampaigns.Include(x => x.Invitations).FirstOrDefaultAsync(x => x.Id == id, ct);
+    public Task AddAsync(BetaCampaign campaign, CancellationToken ct) => db.BetaCampaigns.AddAsync(campaign, ct).AsTask();
+    public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
+}
+public sealed class BetaInvitationRepository(ControlDbContext db) : IBetaInvitationRepository
+{
+    public async Task<IReadOnlyList<BetaInvitation>> GetAsync(Guid campaignId, CancellationToken ct) => await db.BetaInvitations.AsNoTracking().Where(x => x.BetaCampaignId == campaignId).OrderByDescending(x => x.CreatedAtUtc).ToListAsync(ct);
+    public Task<BetaInvitation?> GetByIdAsync(Guid campaignId, Guid id, CancellationToken ct) => db.BetaInvitations.AsNoTracking().FirstOrDefaultAsync(x => x.BetaCampaignId == campaignId && x.Id == id, ct);
+    public Task<BetaInvitation?> GetByIdForUpdateAsync(Guid campaignId, Guid id, CancellationToken ct) => db.BetaInvitations.FirstOrDefaultAsync(x => x.BetaCampaignId == campaignId && x.Id == id, ct);
+    public Task AddAsync(BetaInvitation invitation, CancellationToken ct) => db.BetaInvitations.AddAsync(invitation, ct).AsTask();
+    public Task SaveChangesAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
+}

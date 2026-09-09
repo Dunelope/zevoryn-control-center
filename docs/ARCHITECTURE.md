@@ -47,9 +47,13 @@ Product deletion is implemented as deactivation to protect future dependent data
 
 Each SaaS remains the owner of its users, business rules, authentication, tokens, and sensitive data. Future adapters will call authenticated internal APIs or receive authenticated webhooks/polling responses. There is an explicit rule: **the Control Center must not access external SaaS databases directly**.
 
-## Future Beta module
+## Beta Management
 
-The Beta module will orchestrate campaigns and invitations through the target SaaS internal API. The SaaS will create and validate signup tokens; Control Center will not generate those tokens itself.
+BetaCampaign and BetaInvitation are central, product-agnostic orchestration records. Campaigns transition Draft → Active → Paused/Closed, with Paused → Active allowed and Closed terminal. Active invitation capacity counts Pending, Sent, Accepted, and Failed invitations; Revoked and Expired invitations free capacity. A partial unique index prevents duplicate active emails within a campaign.
+
+The current milestone creates only central invitation records. It does not send email, generate invitation tokens, call CleanersFlow, or call Postmark. `ExternalReference` is reserved for a future SaaS invitation identifier. A future `IBetaInvitationProvider` contract can create/revoke invitations in an authenticated product API without exposing raw tokens to Control Center.
+
+The target SaaS remains responsible for token generation, token validation, signup security, and invitation-specific business rules.
 
 ## Future AI Lab
 

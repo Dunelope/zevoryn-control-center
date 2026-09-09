@@ -14,7 +14,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<ControlDbContext>(o => o.UseNpgsql(configuration.GetConnectionString("ControlDatabase")));
-        services.AddScoped<IProductRepository, ProductRepository>(); services.AddScoped<IProductEnvironmentRepository, ProductEnvironmentRepository>(); services.AddScoped<IProductConnectionRepository, ProductConnectionRepository>(); services.AddScoped<ISaaSEventRepository, SaaSEventRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>(); services.AddScoped<IProductEnvironmentRepository, ProductEnvironmentRepository>(); services.AddScoped<IProductConnectionRepository, ProductConnectionRepository>(); services.AddScoped<ISaaSEventRepository, SaaSEventRepository>(); services.AddScoped<IBetaCampaignRepository, BetaCampaignRepository>(); services.AddScoped<IBetaInvitationRepository, BetaInvitationRepository>();
         services.AddSingleton<ISecretProvider, EnvironmentSecretProvider>();
         services.AddHttpClient<IEnvironmentHealthChecker, HttpEnvironmentHealthChecker>(client => { client.Timeout = TimeSpan.FromSeconds(5); client.DefaultRequestHeaders.UserAgent.ParseAdd("Zevoryn-Control-Center-HealthCheck/1.0"); });
         return services;
