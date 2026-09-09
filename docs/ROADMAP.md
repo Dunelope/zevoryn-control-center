@@ -387,7 +387,7 @@ Afficher :
 
 ## Status: completed centrally on `feature/beta-management`
 
-Implemented: product-agnostic BetaCampaign/BetaInvitation entities, lifecycle endpoints, invitation capacity and duplicate-email rules, real-time transition events, PostgreSQL integration tests, and the `/beta` operator UI. CleanersFlow-specific provider calls, email delivery, token creation, and external invitation synchronization remain deferred to Milestone 5.
+Implemented: product-agnostic BetaCampaign/BetaInvitation entities, lifecycle endpoints, invitation capacity and duplicate-email rules, real-time transition events, PostgreSQL integration tests, the `/beta` operator UI, and the initial CleanersFlow provider orchestration with retry/revoke/sync endpoints. Broader provider coverage, polling, and SSRF hardening remain follow-up work.
 
 ## Objectif
 
@@ -1118,7 +1118,7 @@ Automation
 - [ ] Customers
 - [ ] Beta Campaigns
 - [ ] Beta Invitations
-- [ ] CleanersFlow integration
+- [x] CleanersFlow beta invitation integration (initial internal API orchestration)
 - [ ] polling sécurisé
 - [ ] synchronisation temps réel
 

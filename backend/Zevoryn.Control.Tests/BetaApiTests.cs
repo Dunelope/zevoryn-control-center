@@ -18,7 +18,8 @@ public sealed class BetaApiTests(PostgresApiFixture fixture) : IClassFixture<Pos
     public async Task Campaign_lifecycle_and_invalid_transition_are_enforced()
     {
         var product = await CreateProductAsync("beta-lifecycle");
-        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Lifecycle Beta", null, 2, null, null));
+        var environment = await CreateTargetAsync(product.Id, "beta-lifecycle");
+        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Lifecycle Beta", null, 2, null, null, environment.Id));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode); var campaign = await response.Content.ReadFromJsonAsync<BetaCampaignDto>(); Assert.NotNull(campaign); Assert.Equal(BetaCampaignStatus.Draft, campaign!.Status);
         Assert.Equal(HttpStatusCode.NoContent, (await fixture.Client.PostAsync($"/api/beta/campaigns/{campaign.Id}/activate", null)).StatusCode);
         var events = await fixture.Client.GetFromJsonAsync<SaaSEventDto[]>("/api/events"); Assert.Contains(events!, x => x.Type == "BetaCampaignActivated"); Assert.DoesNotContain(events!, x => x.Type == "BetaCampaignActive");
@@ -32,7 +33,8 @@ public sealed class BetaApiTests(PostgresApiFixture fixture) : IClassFixture<Pos
     public async Task Invitation_requires_active_campaign_duplicate_and_capacity_rules_apply()
     {
         var product = await CreateProductAsync("beta-invitations");
-        var campaignResponse = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Invitation Beta", null, 1, null, null));
+        var environment = await CreateTargetAsync(product.Id, "beta-invitations");
+        var campaignResponse = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Invitation Beta", null, 1, null, null, environment.Id));
         var campaign = await campaignResponse.Content.ReadFromJsonAsync<BetaCampaignDto>(); Assert.NotNull(campaign);
         var beforeActive = await fixture.Client.PostAsJsonAsync($"/api/beta/campaigns/{campaign!.Id}/invitations", new CreateBetaInvitationRequest("before@example.com", null)); Assert.Equal(HttpStatusCode.Conflict, beforeActive.StatusCode);
         await fixture.Client.PostAsync($"/api/beta/campaigns/{campaign.Id}/activate", null);
@@ -48,9 +50,32 @@ public sealed class BetaApiTests(PostgresApiFixture fixture) : IClassFixture<Pos
     [Fact]
     public async Task Campaign_filters_by_product_and_status()
     {
-        var product = await CreateProductAsync("beta-filter"); await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Filter Beta", null, 1, null, null));
+        var product = await CreateProductAsync("beta-filter"); var environment = await CreateTargetAsync(product.Id, "beta-filter"); await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Filter Beta", null, 1, null, null, environment.Id));
         var filtered = await fixture.Client.GetFromJsonAsync<BetaCampaignDto[]>($"/api/beta/campaigns?productId={product.Id}&status=Draft"); Assert.NotNull(filtered); Assert.Contains(filtered!, x => x.Name == "Filter Beta");
     }
 
+    [Fact]
+    public async Task Campaign_rejects_environment_from_another_product()
+    {
+        var product = await CreateProductAsync("beta-target"); var other = await CreateProductAsync("beta-other"); var environment = await CreateTargetAsync(other.Id, "beta-other");
+        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Wrong Target", null, 1, null, null, environment.Id));
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Campaign_rejects_missing_environment()
+    {
+        var product = await CreateProductAsync("beta-no-target");
+        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "No Target", null, 1, null, null));
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
     private async Task<ProductDto> CreateProductAsync(string prefix) { var response = await fixture.Client.PostAsJsonAsync("/api/products", new CreateProductRequest($"{prefix} product", $"{prefix}-{Guid.NewGuid():N}", null)); response.EnsureSuccessStatusCode(); return (await response.Content.ReadFromJsonAsync<ProductDto>())!; }
+    private async Task<ProductEnvironmentDto> CreateTargetAsync(Guid productId, string prefix)
+    {
+        var environmentResponse = await fixture.Client.PostAsJsonAsync($"/api/products/{productId}/environments", new CreateProductEnvironmentRequest($"{prefix} environment", EnvironmentType.Development, "http://localhost:5080"));
+        environmentResponse.EnsureSuccessStatusCode(); var environment = (await environmentResponse.Content.ReadFromJsonAsync<ProductEnvironmentDto>())!;
+        var connectionResponse = await fixture.Client.PostAsJsonAsync($"/api/products/{productId}/environments/{environment.Id}/connections", new CreateProductConnectionRequest(ConnectionType.InternalApi, $"{prefix}-control-api"));
+        connectionResponse.EnsureSuccessStatusCode(); return environment;
+    }
 }
