@@ -51,7 +51,7 @@ Each SaaS remains the owner of its users, business rules, authentication, tokens
 
 BetaCampaign and BetaInvitation are central, product-agnostic orchestration records. Campaigns transition Draft → Active → Paused/Closed, with Paused → Active allowed and Closed terminal. Active invitation capacity counts Pending, Sent, Accepted, and Failed invitations; Revoked and Expired invitations free capacity. A partial unique index prevents duplicate active emails within a campaign.
 
-The current milestone creates only central invitation records. It does not send email, generate invitation tokens, call CleanersFlow, or call Postmark. `ExternalReference` is reserved for a future SaaS invitation identifier. A future `IBetaInvitationProvider` contract can create/revoke invitations in an authenticated product API without exposing raw tokens to Control Center.
+Zevoryn creates the central record first, then delegates token generation, hashing, email delivery, acceptance, and provider-specific rules to the selected integration. `ExternalReference` stores only the remote invitation ID; provider failures remain retryable central `Failed` records with bounded, sanitized error details.
 
 The target SaaS remains responsible for token generation, token validation, signup security, and invitation-specific business rules.
 
@@ -62,6 +62,12 @@ AI Lab is currently only a navigation placeholder. It will later manage model de
 ## Security evolution
 
 Authentication and operator/RBAC are deliberately deferred. The extension points are the API pipeline, per-integration authenticated clients, secret references rather than plaintext credentials, structured audit events, and a future authorization policy layer. Local CORS and configuration are already environment-driven.
+
+## CleanersFlow beta integration
+
+Zevoryn orchestrates invitations through `CleanersFlowBetaInvitationProvider`, selected by product slug and an enabled `ProductConnection` of type `InternalApi`. The provider resolves a logical secret reference through `ISecretProvider` and sends it only as `X-Zevoryn-Control-Key` to CleanersFlow's dedicated internal control API. Its client has a timeout and redirects disabled; production should require HTTPS and restrict allowed hosts/egress to reduce SSRF risk.
+
+CleanersFlow remains authoritative for token generation, hashing, email, acceptance, quotas, and product-specific status. Zevoryn sends its invitation ID as `sourceReference`; CleanersFlow's unique source-reference index makes create/retry idempotent. Zevoryn persists only the remote invitation ID as `ExternalReference`, never a token or hash. Status mapping is explicit: Sent, Accepted, Revoked, Expired, Pending, and unknown/error to Failed.
 
 ## Integration testing
 

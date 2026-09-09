@@ -65,6 +65,8 @@ Dashboard `/`, Products `/products`, Product detail `/products/:id`, Events `/ev
 
 Product deletion is intentionally a deactivation (`Inactive`) so future dependent data remains consistent. Environment deletion is hard deletion only when no ProductConnection exists; SaaSEvent environment references remain nullable. ProductConnection stores only a logical `SecretReference`, never credentials.
 
+CleanersFlow beta invitations are orchestrated through its authenticated internal API. CleanersFlow generates/hashes tokens, sends email, and owns acceptance; Zevoryn stores only safe metadata and the external invitation ID. The Zevoryn invitation ID is sent as `sourceReference` for idempotent create/retry. Configure `cleanersflow-staging-control-api` with `ZEVORYN_SECRET_CLEANERSFLOW_STAGING_CONTROL_API` and the same value as CleanersFlow `ControlIntegration__ApiKey`; never use real secrets in example files.
+
 Health checks use a five-second HttpClient timeout and request `{BaseUrl}/health`. Only HTTP/HTTPS URLs are accepted. This is a foundation, not a complete SSRF defense; deployed environments should add allowlists, private-network egress controls, and stronger URL/IP validation.
 
 No authentication, RBAC, customer data, billing, model execution, or direct external SaaS database access is implemented in this milestone.
