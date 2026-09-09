@@ -17,10 +17,21 @@ public sealed class CleanersFlowBetaInvitationProvider(IHttpClientFactory client
         foreach (var connection in await connections.GetByEnvironmentIdAsync(environment.Id, ct))
             if (connection.ConnectionType == ConnectionType.InternalApi && connection.IsEnabled)
             {
+                var hasAccessClientIdReference = !string.IsNullOrWhiteSpace(connection.AccessClientIdSecretReference);
+                var hasAccessClientSecretReference = !string.IsNullOrWhiteSpace(connection.AccessClientSecretSecretReference);
+                if (hasAccessClientIdReference != hasAccessClientSecretReference) throw new InvalidOperationException("Cloudflare Access configuration is incomplete.");
                 if (!Uri.TryCreate(environment.BaseUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme is not ("http" or "https")) throw new InvalidOperationException("The configured CleanersFlow base URL is invalid.");
                 if (string.Equals(configuration["ASPNETCORE_ENVIRONMENT"], "Production", StringComparison.OrdinalIgnoreCase) && !string.Equals(baseUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Production CleanersFlow connections must use HTTPS.");
                 var secret = await secrets.GetSecretAsync(connection.SecretReference, ct); if (string.IsNullOrWhiteSpace(secret)) throw new InvalidOperationException("The CleanersFlow integration secret is unavailable.");
-                var client = clients.CreateClient("cleanersflow-control"); client.BaseAddress = new Uri(baseUri, baseUri.AbsoluteUri.EndsWith('/') ? baseUri.AbsoluteUri : baseUri.AbsoluteUri + "/"); client.DefaultRequestHeaders.Remove("X-Zevoryn-Control-Key"); client.DefaultRequestHeaders.Add("X-Zevoryn-Control-Key", secret); return client;
+                var client = clients.CreateClient("cleanersflow-control"); client.BaseAddress = new Uri(baseUri, baseUri.AbsoluteUri.EndsWith('/') ? baseUri.AbsoluteUri : baseUri.AbsoluteUri + "/"); client.DefaultRequestHeaders.Remove("X-Zevoryn-Control-Key"); client.DefaultRequestHeaders.Add("X-Zevoryn-Control-Key", secret);
+                if (hasAccessClientIdReference)
+                {
+                    var accessClientId = await secrets.GetSecretAsync(connection.AccessClientIdSecretReference!, ct);
+                    var accessClientSecret = await secrets.GetSecretAsync(connection.AccessClientSecretSecretReference!, ct);
+                    if (string.IsNullOrWhiteSpace(accessClientId) || string.IsNullOrWhiteSpace(accessClientSecret)) throw new InvalidOperationException("Cloudflare Access credentials are unavailable.");
+                    client.DefaultRequestHeaders.Remove("CF-Access-Client-Id"); client.DefaultRequestHeaders.Remove("CF-Access-Client-Secret"); client.DefaultRequestHeaders.Add("CF-Access-Client-Id", accessClientId); client.DefaultRequestHeaders.Add("CF-Access-Client-Secret", accessClientSecret);
+                }
+                return client;
             }
         throw new InvalidOperationException("No enabled CleanersFlow InternalApi connection is configured.");
     }

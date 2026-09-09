@@ -33,7 +33,7 @@ Product deletion is implemented as deactivation to protect future dependent data
 
 ## Product connections and secrets
 
-`ProductConnection` represents an integration capability such as `InternalApi` or `HealthEndpoint`. `SecretReference` is a logical identifier such as `cleanersflow-production-control-api`; no API key, password, or bearer token is persisted. The local `ISecretProvider` maps it to `ZEVORYN_SECRET_CLEANERSFLOW_PRODUCTION_CONTROL_API`. Secret values are never returned by the API or logged. A cloud secret manager can replace this provider later.
+`ProductConnection` represents an integration capability such as `InternalApi` or `HealthEndpoint`. `SecretReference` is a logical identifier such as `cleanersflow-production-control-api`; no API key, password, or bearer token is persisted. The optional `AccessClientIdSecretReference` and `AccessClientSecretSecretReference` are also logical identifiers and must be configured together. The local `ISecretProvider` maps references to `ZEVORYN_SECRET_*` variables. Secret values are never returned by the API or logged. A cloud secret manager can replace this provider later.
 
 ## Health-check foundation
 
@@ -66,6 +66,8 @@ Authentication and operator/RBAC are deliberately deferred. The extension points
 ## CleanersFlow beta integration
 
 Zevoryn orchestrates invitations through `CleanersFlowBetaInvitationProvider`, selected by product slug and an enabled `ProductConnection` of type `InternalApi`. The provider resolves a logical secret reference through `ISecretProvider` and sends it only as `X-Zevoryn-Control-Key` to CleanersFlow's dedicated internal control API. Its client has a timeout and redirects disabled; production should require HTTPS and restrict allowed hosts/egress to reduce SSRF risk.
+
+When both optional Access references are configured, the provider resolves them through `ISecretProvider` and sends `CF-Access-Client-Id` and `CF-Access-Client-Secret` alongside `X-Zevoryn-Control-Key`; with neither configured, only the existing control-key header is sent. Incomplete or unresolved Access configuration fails before the remote request and never includes credential values in errors.
 
 CleanersFlow remains authoritative for token generation, hashing, email, acceptance, quotas, and product-specific status. Zevoryn sends its invitation ID as `sourceReference`; CleanersFlow's unique source-reference index makes create/retry idempotent. Zevoryn persists only the remote invitation ID as `ExternalReference`, never a token or hash. Status mapping is explicit: Sent, Accepted, Revoked, Expired, Pending, and unknown/error to Failed.
 

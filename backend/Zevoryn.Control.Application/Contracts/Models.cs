@@ -8,9 +8,9 @@ public sealed record ProductDto(Guid Id, string Name, string Slug, string? Descr
 public sealed record CreateProductEnvironmentRequest(string Name, EnvironmentType EnvironmentType, string BaseUrl);
 public sealed record UpdateProductEnvironmentRequest(string Name, EnvironmentType EnvironmentType, string BaseUrl);
 public sealed record ProductEnvironmentDto(Guid Id, Guid ProductId, string Name, EnvironmentType EnvironmentType, string BaseUrl, EnvironmentStatus Status, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
-public sealed record CreateProductConnectionRequest(ConnectionType ConnectionType, string SecretReference, bool IsEnabled = true);
-public sealed record UpdateProductConnectionRequest(ConnectionType ConnectionType, string SecretReference, bool IsEnabled);
-public sealed record ProductConnectionDto(Guid Id, Guid ProductEnvironmentId, ConnectionType ConnectionType, string SecretReference, bool IsEnabled, DateTime? LastSuccessfulConnectionAtUtc, DateTime? LastFailureAtUtc, string? LastError, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
+public sealed record CreateProductConnectionRequest(ConnectionType ConnectionType, string SecretReference, string? AccessClientIdSecretReference = null, string? AccessClientSecretSecretReference = null, bool IsEnabled = true);
+public sealed record UpdateProductConnectionRequest(ConnectionType ConnectionType, string SecretReference, string? AccessClientIdSecretReference, string? AccessClientSecretSecretReference, bool IsEnabled);
+public sealed record ProductConnectionDto(Guid Id, Guid ProductEnvironmentId, ConnectionType ConnectionType, string SecretReference, string? AccessClientIdSecretReference, string? AccessClientSecretSecretReference, bool IsEnabled, DateTime? LastSuccessfulConnectionAtUtc, DateTime? LastFailureAtUtc, string? LastError, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
 public sealed record EnvironmentHealthCheckResult(Guid EnvironmentId, EnvironmentStatus Status, int? HttpStatusCode, long? LatencyMs, string? Message, DateTime CheckedAtUtc);
 public sealed record CreateBetaCampaignRequest(Guid ProductId, string Name, string? Description, int MaxInvitations, DateTime? StartsAtUtc, DateTime? EndsAtUtc, Guid EnvironmentId = default);
 public sealed record UpdateBetaCampaignRequest(string Name, string? Description, int MaxInvitations, DateTime? StartsAtUtc, DateTime? EndsAtUtc, Guid? EnvironmentId = null);
