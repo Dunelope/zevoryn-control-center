@@ -1,0 +1,2 @@
+import { describe, expect, it } from 'vitest'; import { betaMetrics } from './betaMetrics';
+describe('beta metrics', () => { it('aggregates real campaign counts', () => { const result = betaMetrics([{ status: 'Active', pendingInvitations: 2, acceptedInvitations: 1 }, { status: 'Closed', pendingInvitations: 3, acceptedInvitations: 4 }] as any); expect(result).toEqual({ activeCampaigns: 1, pendingInvitations: 5, acceptedInvitations: 5 }); }); });

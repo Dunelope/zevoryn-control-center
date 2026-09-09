@@ -17,7 +17,7 @@ builder.Services.AddHealthChecks().AddCheck<PostgresHealthCheck>("postgres");
 builder.Services.AddSignalR();
 builder.Services.AddCors(options => options.AddPolicy("local", policy => policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"]).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddScoped<IProductService, ProductService>(); builder.Services.AddScoped<IProductEnvironmentService, ProductEnvironmentService>(); builder.Services.AddScoped<IProductConnectionService, ProductConnectionService>(); builder.Services.AddScoped<ISaaSEventService, SaaSEventService>(); builder.Services.AddScoped<IControlEventPublisher, SignalRControlEventPublisher>();
+builder.Services.AddScoped<IProductService, ProductService>(); builder.Services.AddScoped<IProductEnvironmentService, ProductEnvironmentService>(); builder.Services.AddScoped<IProductConnectionService, ProductConnectionService>(); builder.Services.AddScoped<IBetaCampaignService, BetaCampaignService>(); builder.Services.AddScoped<IBetaInvitationService, BetaInvitationService>(); builder.Services.AddScoped<ISaaSEventService, SaaSEventService>(); builder.Services.AddScoped<IControlEventPublisher, SignalRControlEventPublisher>();
 var app = builder.Build();
 if (app.Configuration.GetValue<bool>("Database:ApplyMigrations"))
 {

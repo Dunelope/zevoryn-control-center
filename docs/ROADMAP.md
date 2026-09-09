@@ -385,6 +385,10 @@ Afficher :
 
 # Milestone 4 — Beta Management
 
+## Status: completed centrally on `feature/beta-management`
+
+Implemented: product-agnostic BetaCampaign/BetaInvitation entities, lifecycle endpoints, invitation capacity and duplicate-email rules, real-time transition events, PostgreSQL integration tests, and the `/beta` operator UI. CleanersFlow-specific provider calls, email delivery, token creation, and external invitation synchronization remain deferred to Milestone 5.
+
 ## Objectif
 
 Gérer les programmes bêta directement depuis Zevoryn Control Center.

@@ -34,3 +34,17 @@ public sealed class ProductConnectionConfiguration : IEntityTypeConfiguration<Pr
         b.ToTable("product_connections"); b.HasKey(x => x.Id); b.Property(x => x.ConnectionType).HasConversion<string>().HasMaxLength(32).IsRequired(); b.Property(x => x.SecretReference).HasMaxLength(200).IsRequired(); b.Property(x => x.LastError).HasMaxLength(2000); b.Property(x => x.IsEnabled).IsRequired(); b.HasIndex(x => x.ProductEnvironmentId); b.HasIndex(x => new { x.ProductEnvironmentId, x.ConnectionType }).IsUnique(); b.HasOne(x => x.ProductEnvironment).WithMany().HasForeignKey(x => x.ProductEnvironmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
+public sealed class BetaCampaignConfiguration : IEntityTypeConfiguration<BetaCampaign>
+{
+    public void Configure(EntityTypeBuilder<BetaCampaign> b)
+    {
+        b.ToTable("beta_campaigns"); b.HasKey(x => x.Id); b.Property(x => x.Name).HasMaxLength(200).IsRequired(); b.Property(x => x.Description).HasMaxLength(2000); b.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired(); b.Property(x => x.MaxInvitations).IsRequired(); b.HasIndex(x => x.ProductId); b.HasIndex(x => x.Status); b.HasOne<Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict); b.HasMany(x => x.Invitations).WithOne(x => x.BetaCampaign).HasForeignKey(x => x.BetaCampaignId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+public sealed class BetaInvitationConfiguration : IEntityTypeConfiguration<BetaInvitation>
+{
+    public void Configure(EntityTypeBuilder<BetaInvitation> b)
+    {
+        b.ToTable("beta_invitations"); b.HasKey(x => x.Id); b.Property(x => x.Email).HasMaxLength(320).IsRequired(); b.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired(); b.Property(x => x.ExternalReference).HasMaxLength(200); b.HasIndex(x => x.BetaCampaignId); b.HasIndex(x => x.Status); b.HasIndex(x => new { x.BetaCampaignId, x.Email }).IsUnique().HasFilter("\"Status\" NOT IN ('Revoked', 'Expired')");
+    }
+}
