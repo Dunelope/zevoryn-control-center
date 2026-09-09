@@ -1,6 +1,6 @@
 # Zevoryn Control Center
 
-Private internal control plane for Zevoryn SaaS products. This repository implements the initial production-oriented foundation from Milestone 0, with Products/Environments and the generic real-time event foundation.
+Private internal control plane for Zevoryn SaaS products. This repository implements the foundation plus the Products & Environments milestone: product/environment lifecycle management, secret references, connection metadata, and manual health checks.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ dotnet build Zevoryn.Control.sln
 dotnet run --project backend/Zevoryn.Control.Api
 ```
 
-Apply the migration with:
+Docker Compose applies pending migrations when `Database__ApplyMigrations=true`. For local SDK-driven migration management:
 
 ```bash
 dotnet ef database update --project backend/Zevoryn.Control.Infrastructure --startup-project backend/Zevoryn.Control.Api
@@ -62,5 +62,9 @@ docker-compose.yml       postgres, api, frontend
 ## Current routes
 
 Dashboard `/`, Products `/products`, Product detail `/products/:id`, Events `/events`, plus clearly marked placeholders for Monitoring, Beta, Customers, Billing, and AI Lab.
+
+Product deletion is intentionally a deactivation (`Inactive`) so future dependent data remains consistent. Environment deletion is hard deletion only when no ProductConnection exists; SaaSEvent environment references remain nullable. ProductConnection stores only a logical `SecretReference`, never credentials.
+
+Health checks use a five-second HttpClient timeout and request `{BaseUrl}/health`. Only HTTP/HTTPS URLs are accepted. This is a foundation, not a complete SSRF defense; deployed environments should add allowlists, private-network egress controls, and stronger URL/IP validation.
 
 No authentication, RBAC, customer data, billing, model execution, or direct external SaaS database access is implemented in this milestone.

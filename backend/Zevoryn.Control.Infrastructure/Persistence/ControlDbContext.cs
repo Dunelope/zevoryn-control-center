@@ -8,6 +8,7 @@ public sealed class ControlDbContext(DbContextOptions<ControlDbContext> options)
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductEnvironment> ProductEnvironments => Set<ProductEnvironment>();
     public DbSet<SaaSEvent> SaaSEvents => Set<SaaSEvent>();
+    public DbSet<ProductConnection> ProductConnections => Set<ProductConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
