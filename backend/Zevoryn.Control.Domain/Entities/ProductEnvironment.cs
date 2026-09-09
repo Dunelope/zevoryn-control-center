@@ -30,4 +30,14 @@ public sealed class ProductEnvironment
             throw new ArgumentException("BaseUrl must be a valid absolute HTTP or HTTPS URL.", nameof(baseUrl));
         return new ProductEnvironment(Guid.NewGuid(), productId, name.Trim(), type, uri, nowUtc ?? DateTime.UtcNow);
     }
+
+    public void Update(string name, EnvironmentType type, string baseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Environment name cannot be empty.", nameof(name));
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
+            throw new ArgumentException("BaseUrl must be a valid absolute HTTP or HTTPS URL.", nameof(baseUrl));
+        Name = name.Trim(); EnvironmentType = type; BaseUrl = uri.ToString(); UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    public void UpdateHealth(EnvironmentStatus status, DateTime? checkedAtUtc = null) { Status = status; UpdatedAtUtc = checkedAtUtc ?? DateTime.UtcNow; }
 }

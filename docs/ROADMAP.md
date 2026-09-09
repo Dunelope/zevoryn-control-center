@@ -154,6 +154,10 @@ doit permettre de démarrer toute la plateforme localement.
 
 # Milestone 1 — Products & Environments
 
+## Status: completed on `feature/products-environments`
+
+Implemented: full Product lifecycle endpoints with safe deactivation, full ProductEnvironment lifecycle endpoints, ProductConnection metadata with secret references, manual environment health-check contracts, and PostgreSQL-backed API integration tests. Monitoring remains a future milestone; this work does not add a hosted polling engine.
+
 ## Objectif
 
 Permettre à Zevoryn Control Center de connaître tous les SaaS gérés.

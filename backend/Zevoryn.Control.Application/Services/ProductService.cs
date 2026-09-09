@@ -22,6 +22,22 @@ public sealed class ProductService(IProductRepository repository) : IProductServ
         return Map(product);
     }
 
+    public async Task<ProductDto> UpdateAsync(Guid id, UpdateProductRequest request, CancellationToken cancellationToken)
+    {
+        var product = await repository.GetByIdForUpdateAsync(id, cancellationToken) ?? throw new ResourceNotFoundException($"Product '{id}' was not found.");
+        if (await repository.ExistsBySlugAsync(request.Slug, id, cancellationToken)) throw new ConflictException($"A product with slug '{request.Slug}' already exists.");
+        product.Update(request.Name, request.Slug, request.Description);
+        await repository.SaveChangesAsync(cancellationToken);
+        return Map(product);
+    }
+
+    public async Task DeactivateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var product = await repository.GetByIdForUpdateAsync(id, cancellationToken) ?? throw new ResourceNotFoundException($"Product '{id}' was not found.");
+        product.Deactivate();
+        await repository.SaveChangesAsync(cancellationToken);
+    }
+
     internal static ProductDto Map(Product p) => new(p.Id, p.Name, p.Slug, p.Description, p.Status, p.CreatedAtUtc, p.UpdatedAtUtc);
 }
 
@@ -29,7 +45,9 @@ public interface IProductRepository
 {
     Task<IReadOnlyList<Product>> GetAllAsync(CancellationToken cancellationToken);
     Task<Product?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<Product?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken);
     Task<bool> ExistsBySlugAsync(string slug, CancellationToken cancellationToken);
+    Task<bool> ExistsBySlugAsync(string slug, Guid excludingId, CancellationToken cancellationToken);
     Task AddAsync(Product product, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

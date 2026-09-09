@@ -45,4 +45,6 @@ public sealed class Product
             throw new ArgumentException("Product slug is invalid.", nameof(slug));
         Name = name.Trim(); Slug = normalizedSlug; Description = description?.Trim(); UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    public void Deactivate() { Status = ProductStatus.Inactive; UpdatedAtUtc = DateTime.UtcNow; }
 }
