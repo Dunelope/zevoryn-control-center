@@ -30,4 +30,13 @@ describe('enum API boundary', () => {
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     expect(JSON.parse(request.body as string)).toMatchObject({ name: 'Staging', environmentType: 1 });
   });
+
+  it('loads filtered feedback reports and patches status without control headers', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 })).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'r1', status: 'InProgress' }), { status: 200 }));
+    await api.feedbackReports('New', 'Bug'); await api.updateFeedbackReportStatus('r1', 'InProgress');
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/feedback-reports?status=New&type=Bug');
+    expect(fetchMock.mock.calls[1][0]).toContain('/api/feedback-reports/r1/status');
+    expect((fetchMock.mock.calls[1][1] as RequestInit).method).toBe('PATCH');
+    expect((fetchMock.mock.calls[1][1] as RequestInit).headers).toEqual({ 'Content-Type': 'application/json' });
+  });
 });

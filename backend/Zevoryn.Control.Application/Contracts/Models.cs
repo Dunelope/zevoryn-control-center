@@ -19,3 +19,5 @@ public sealed record CreateBetaInvitationRequest(string Email, DateTime? Expires
 public sealed record BetaInvitationDto(Guid Id, Guid BetaCampaignId, string Email, BetaInvitationStatus Status, string? ExternalReference, string? ErrorCode, string? ErrorMessage, DateTime? InvitedAtUtc, DateTime? AcceptedAtUtc, DateTime? RevokedAtUtc, DateTime? ExpiresAtUtc, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
 public sealed record CreateSaaSEventRequest(Guid ProductId, Guid? EnvironmentId, string Type, string? ExternalEntityId, string PayloadJson, DateTime OccurredAtUtc);
 public sealed record SaaSEventDto(Guid Id, Guid ProductId, Guid? EnvironmentId, string Type, string? ExternalEntityId, string PayloadJson, DateTime OccurredAtUtc, DateTime ReceivedAtUtc);
+public sealed record FeedbackReportDto(Guid Id, Guid CompanyId, string CompanyName, Guid SubmittedByUserId, string SubmitterName, string SubmitterEmail, string Type, string Title, string Description, string CurrentPageRoute, string Status, DateTime CreatedAtUtc, DateTime UpdatedAtUtc);
+public sealed record UpdateFeedbackReportStatusRequest(string Status);
