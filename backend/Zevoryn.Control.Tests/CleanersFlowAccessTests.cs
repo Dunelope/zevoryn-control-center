@@ -55,7 +55,8 @@ public sealed class CleanersFlowAccessTests
     {
         var product = Product.Create("CleanersFlow", "cleanersflow"); var environment = ProductEnvironment.Create(product.Id, "Staging", EnvironmentType.Staging, "https://staging.example.test"); var connection = ProductConnection.Create(environment.Id, ConnectionType.InternalApi, "control", idReference, secretReference);
         var productRepository = new SingleProductRepository(product); var environmentRepository = new SingleEnvironmentRepository(environment); var connectionRepository = new SingleConnectionRepository(connection); var secretProvider = new DictionarySecretProvider(values); handler ??= new CaptureHandler();
-        var provider = new CleanersFlowBetaInvitationProvider(new Factory(handler), productRepository, environmentRepository, connectionRepository, secretProvider, new ConfigurationBuilder().Build());
+        var resolver = new CleanersFlowClientResolver(new Factory(handler), productRepository, environmentRepository, connectionRepository, secretProvider, new ConfigurationBuilder().Build());
+        var provider = new CleanersFlowBetaInvitationProvider(resolver);
         await provider.CreateInvitationAsync(new(product.Id, environment.Id, "user@example.com", "source"), CancellationToken.None);
         return new CaptureResponse(handler.Status, handler.Headers);
     }

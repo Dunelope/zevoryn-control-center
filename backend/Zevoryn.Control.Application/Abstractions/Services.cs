@@ -56,3 +56,14 @@ public interface IBetaInvitationProviderResolver
 {
     Task<IBetaInvitationProvider> ResolveAsync(Guid productId, Guid environmentId, CancellationToken cancellationToken);
 }
+public interface ICleanersFlowClientResolver
+{
+    Task<HttpClient> CreateAsync(Guid productId, Guid environmentId, CancellationToken cancellationToken);
+    Task<HttpClient> CreateDefaultAsync(CancellationToken cancellationToken);
+}
+public interface ICleanersFlowFeedbackReportProvider
+{
+    Task<IReadOnlyList<FeedbackReportDto>> GetAsync(string? status, string? type, CancellationToken cancellationToken);
+    Task<FeedbackReportDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<FeedbackReportDto> UpdateStatusAsync(Guid id, string status, CancellationToken cancellationToken);
+}

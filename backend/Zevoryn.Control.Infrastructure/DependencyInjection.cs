@@ -19,6 +19,8 @@ public static class DependencyInjection
         services.AddSingleton<ISecretProvider, EnvironmentSecretProvider>();
         services.AddHttpClient("cleanersflow-control", client => client.Timeout = TimeSpan.FromSeconds(10)).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
         services.AddScoped<IBetaInvitationProvider, CleanersFlowBetaInvitationProvider>();
+        services.AddScoped<ICleanersFlowClientResolver, CleanersFlowClientResolver>();
+        services.AddScoped<ICleanersFlowFeedbackReportProvider, CleanersFlowFeedbackReportProvider>();
         services.AddScoped<IBetaInvitationProviderResolver, BetaInvitationProviderResolver>();
         services.AddHttpClient<IEnvironmentHealthChecker, HttpEnvironmentHealthChecker>(client => { client.Timeout = TimeSpan.FromSeconds(5); client.DefaultRequestHeaders.UserAgent.ParseAdd("Zevoryn-Control-Center-HealthCheck/1.0"); });
         return services;
