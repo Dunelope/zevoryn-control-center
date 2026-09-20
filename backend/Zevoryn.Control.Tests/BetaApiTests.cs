@@ -20,7 +20,7 @@ public sealed class BetaApiTests(PostgresApiFixture fixture) : IClassFixture<Pos
         var product = await CreateProductAsync("beta-lifecycle");
         var environment = await CreateTargetAsync(product.Id, "beta-lifecycle");
         var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Lifecycle Beta", null, 2, null, null, environment.Id));
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode); var campaign = await response.Content.ReadFromJsonAsync<BetaCampaignDto>(); Assert.NotNull(campaign); Assert.Equal(BetaCampaignStatus.Draft, campaign!.Status);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode); var campaign = await response.Content.ReadFromJsonAsync<BetaCampaignDto>(); Assert.NotNull(campaign); Assert.Equal(BetaCampaignStatus.Draft, campaign!.Status); Assert.Equal(BetaPlan.Starter, campaign.BetaPlan);
         Assert.Equal(HttpStatusCode.NoContent, (await fixture.Client.PostAsync($"/api/beta/campaigns/{campaign.Id}/activate", null)).StatusCode);
         var events = await fixture.Client.GetFromJsonAsync<SaaSEventDto[]>("/api/events"); Assert.Contains(events!, x => x.Type == "BetaCampaignActivated"); Assert.DoesNotContain(events!, x => x.Type == "BetaCampaignActive");
         Assert.Equal(HttpStatusCode.NoContent, (await fixture.Client.PostAsync($"/api/beta/campaigns/{campaign.Id}/pause", null)).StatusCode);
@@ -52,6 +52,33 @@ public sealed class BetaApiTests(PostgresApiFixture fixture) : IClassFixture<Pos
     {
         var product = await CreateProductAsync("beta-filter"); var environment = await CreateTargetAsync(product.Id, "beta-filter"); await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Filter Beta", null, 1, null, null, environment.Id));
         var filtered = await fixture.Client.GetFromJsonAsync<BetaCampaignDto[]>($"/api/beta/campaigns?productId={product.Id}&status=Draft"); Assert.NotNull(filtered); Assert.Contains(filtered!, x => x.Name == "Filter Beta");
+    }
+
+    [Theory]
+    [InlineData(BetaPlan.Starter)]
+    [InlineData(BetaPlan.Growth)]
+    [InlineData(BetaPlan.Pro)]
+    public async Task Campaign_explicit_plan_round_trips_and_invitation_snapshot_is_immutable(BetaPlan plan)
+    {
+        var product = await CreateProductAsync($"beta-plan-{plan}");
+        var environment = await CreateTargetAsync(product.Id, $"beta-plan-{plan}");
+        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Plan Beta", null, 2, null, null, environment.Id, plan));
+        var campaign = await response.Content.ReadFromJsonAsync<BetaCampaignDto>(); Assert.NotNull(campaign); Assert.Equal(plan, campaign!.BetaPlan);
+        await fixture.Client.PostAsync($"/api/beta/campaigns/{campaign.Id}/activate", null);
+        var invitationResponse = await fixture.Client.PostAsJsonAsync($"/api/beta/campaigns/{campaign.Id}/invitations", new CreateBetaInvitationRequest($"{plan}@example.com", null));
+        var invitation = await invitationResponse.Content.ReadFromJsonAsync<BetaInvitationDto>(); Assert.NotNull(invitation); Assert.Equal(plan, invitation!.BetaPlan);
+        var updated = await fixture.Client.PutAsJsonAsync($"/api/beta/campaigns/{campaign.Id}", new UpdateBetaCampaignRequest("Plan Beta", null, 2, null, null, BetaPlan: BetaPlan.Pro));
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        var invitations = await fixture.Client.GetFromJsonAsync<BetaInvitationDto[]>($"/api/beta/campaigns/{campaign.Id}/invitations");
+        Assert.Equal(plan, invitations!.Single(x => x.Id == invitation.Id).BetaPlan);
+    }
+
+    [Fact]
+    public async Task Campaign_rejects_an_unsupported_plan_value()
+    {
+        var product = await CreateProductAsync("beta-invalid-plan"); var environment = await CreateTargetAsync(product.Id, "beta-invalid-plan");
+        var response = await fixture.Client.PostAsJsonAsync("/api/beta/campaigns", new CreateBetaCampaignRequest(product.Id, "Invalid Plan", null, 1, null, null, environment.Id, (BetaPlan)99));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

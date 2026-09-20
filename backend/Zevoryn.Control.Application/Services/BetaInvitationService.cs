@@ -19,7 +19,7 @@ public sealed class BetaInvitationService(IBetaCampaignRepository campaigns, IBe
         var invitations = await repository.GetAsync(campaignId, cancellationToken);
         if (invitations.Any(x => x.CountsAgainstCapacity() && x.Email == email)) throw new ConflictException("An active invitation already exists for this email in the campaign.");
         if (invitations.Count(x => x.CountsAgainstCapacity()) >= campaign.MaxInvitations) throw new ConflictException("The campaign invitation capacity has been reached.");
-        var invitation = BetaInvitation.Create(campaignId, email, request.ExpiresAtUtc); await repository.AddAsync(invitation, cancellationToken); await repository.SaveChangesAsync(cancellationToken);
+        var invitation = BetaInvitation.Create(campaignId, email, request.ExpiresAtUtc, betaPlan: campaign.EffectiveBetaPlan); await repository.AddAsync(invitation, cancellationToken); await repository.SaveChangesAsync(cancellationToken);
         await PublishAsync(campaign.ProductId, "BetaInvitationCreated", invitation.Id, cancellationToken); return await ExecuteCreateAsync(campaign, invitation, "BetaInvitationSent", "BetaInvitationFailed", cancellationToken);
     }
     public async Task<BetaInvitationDto> RetryAsync(Guid campaignId, Guid invitationId, CancellationToken cancellationToken)
@@ -34,7 +34,7 @@ public sealed class BetaInvitationService(IBetaCampaignRepository campaigns, IBe
     {
         var environmentId = RequireEnvironment(campaign);
         BetaInvitationProviderResult result;
-        try { result = await (await providers.ResolveAsync(campaign.ProductId, environmentId, ct)).CreateInvitationAsync(new BetaInvitationProviderRequest(campaign.ProductId, environmentId, invitation.Email, invitation.Id.ToString()), ct); }
+        try { result = await (await providers.ResolveAsync(campaign.ProductId, environmentId, ct)).CreateInvitationAsync(new BetaInvitationProviderRequest(campaign.ProductId, environmentId, invitation.Email, invitation.Id.ToString(), Plan: invitation.EffectiveBetaPlan), ct); }
         catch (OperationCanceledException) { throw; }
         catch (Exception) { result = new(null, BetaInvitationStatus.Failed, "provider_unavailable", "The external invitation provider is unavailable."); }
         if (result.Status is BetaInvitationStatus.Sent or BetaInvitationStatus.Accepted)
@@ -78,7 +78,7 @@ public sealed class BetaInvitationService(IBetaCampaignRepository campaigns, IBe
     private async Task PublishAsync(Guid productId, string type, Guid id, CancellationToken ct) => await events.CreateAsync(new CreateSaaSEventRequest(productId, null, type, id.ToString(), System.Text.Json.JsonSerializer.Serialize(new { invitationId = id }), DateTime.UtcNow), ct);
     private static Guid RequireEnvironment(BetaCampaign campaign) => campaign.EnvironmentId ?? throw new ConflictException("This legacy campaign has no target environment; assign one before operating invitations.");
     private async Task RequireCampaignAsync(Guid campaignId, CancellationToken cancellationToken) { if (await campaigns.GetByIdAsync(campaignId, cancellationToken) is null) throw new ResourceNotFoundException($"Campaign '{campaignId}' was not found."); }
-    private static BetaInvitationDto Map(BetaInvitation i) => new(i.Id, i.BetaCampaignId, i.Email, i.Status, i.ExternalReference, i.ErrorCode, i.ErrorMessage, i.InvitedAtUtc, i.AcceptedAtUtc, i.RevokedAtUtc, i.ExpiresAtUtc, i.CreatedAtUtc, i.UpdatedAtUtc);
+    private static BetaInvitationDto Map(BetaInvitation i) => new(i.Id, i.BetaCampaignId, i.Email, i.EffectiveBetaPlan, i.Status, i.ExternalReference, i.ErrorCode, i.ErrorMessage, i.InvitedAtUtc, i.AcceptedAtUtc, i.RevokedAtUtc, i.ExpiresAtUtc, i.CreatedAtUtc, i.UpdatedAtUtc);
 }
 
 public interface IBetaInvitationService

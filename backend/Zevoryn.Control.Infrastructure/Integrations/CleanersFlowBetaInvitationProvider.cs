@@ -7,7 +7,11 @@ using Zevoryn.Control.Domain.Enums;
 
 public sealed class CleanersFlowBetaInvitationProvider(ICleanersFlowClientResolver resolver) : IBetaInvitationProvider
 {
-    public Task<BetaInvitationProviderResult> CreateInvitationAsync(BetaInvitationProviderRequest request, CancellationToken ct) => SendAsync(request.ProductId, request.EnvironmentId, HttpMethod.Post, "api/internal/control/beta-invitations", new { email = request.Email, sourceReference = request.SourceReference }, ct);
+    public Task<BetaInvitationProviderResult> CreateInvitationAsync(BetaInvitationProviderRequest request, CancellationToken ct)
+    {
+        if (!Enum.IsDefined(request.Plan)) throw new ArgumentException("Unsupported CleanersFlow beta plan.", nameof(request));
+        return SendAsync(request.ProductId, request.EnvironmentId, HttpMethod.Post, "api/internal/control/beta-invitations", new { email = request.Email, sourceReference = request.SourceReference, plan = request.Plan.ToString() }, ct);
+    }
     public Task<BetaInvitationProviderResult> GetInvitationAsync(BetaInvitationProviderRequest request, CancellationToken ct) => SendAsync(request.ProductId, request.EnvironmentId, HttpMethod.Get, $"api/internal/control/beta-invitations/{request.ExternalReference}", null, ct);
     public Task<BetaInvitationProviderResult> RevokeInvitationAsync(BetaInvitationProviderRequest request, CancellationToken ct) => SendAsync(request.ProductId, request.EnvironmentId, HttpMethod.Post, $"api/internal/control/beta-invitations/{request.ExternalReference}/revoke", null, ct);
     private async Task<BetaInvitationProviderResult> SendAsync(Guid productId, Guid environmentId, HttpMethod method, string path, object? body, CancellationToken ct)

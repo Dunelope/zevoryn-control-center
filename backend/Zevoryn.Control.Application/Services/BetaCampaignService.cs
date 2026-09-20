@@ -13,7 +13,7 @@ public sealed class BetaCampaignService(IProductRepository products, IProductEnv
     public async Task<BetaCampaignDto> CreateAsync(CreateBetaCampaignRequest request, CancellationToken cancellationToken)
     {
         await ValidateTargetAsync(request.ProductId, request.EnvironmentId, cancellationToken);
-        var campaign = BetaCampaign.Create(request.ProductId, request.EnvironmentId, request.Name, request.Description, request.MaxInvitations, request.StartsAtUtc, request.EndsAtUtc);
+        var campaign = BetaCampaign.Create(request.ProductId, request.EnvironmentId, request.Name, request.Description, request.MaxInvitations, request.StartsAtUtc, request.EndsAtUtc, betaPlan: request.BetaPlan);
         await repository.AddAsync(campaign, cancellationToken); await repository.SaveChangesAsync(cancellationToken);
         await PublishAsync(campaign, "BetaCampaignCreated", cancellationToken); return Map(campaign);
     }
@@ -21,7 +21,7 @@ public sealed class BetaCampaignService(IProductRepository products, IProductEnv
     {
         var campaign = await repository.GetByIdForUpdateAsync(id, cancellationToken) ?? throw new ResourceNotFoundException($"Campaign '{id}' was not found.");
         if (request.EnvironmentId is { } environmentId) await ValidateTargetAsync(campaign.ProductId, environmentId, cancellationToken);
-        try { campaign.Update(request.Name, request.Description, request.MaxInvitations, request.StartsAtUtc, request.EndsAtUtc, request.EnvironmentId); } catch (InvalidOperationException exception) { throw new ConflictException(exception.Message); }
+        try { campaign.Update(request.Name, request.Description, request.MaxInvitations, request.StartsAtUtc, request.EndsAtUtc, request.EnvironmentId, request.BetaPlan); } catch (InvalidOperationException exception) { throw new ConflictException(exception.Message); }
         await repository.SaveChangesAsync(cancellationToken); return Map(campaign);
     }
     public Task ActivateAsync(Guid id, CancellationToken cancellationToken) => TransitionAsync(id, BetaCampaignStatus.Active, cancellationToken);
@@ -42,7 +42,7 @@ public sealed class BetaCampaignService(IProductRepository products, IProductEnv
         if (environmentId == Guid.Empty || await environments.GetByIdAsync(productId, environmentId, ct) is null) throw new ConflictException("The target environment does not belong to the campaign product.");
         if (!(await connections.GetByEnvironmentIdAsync(environmentId, ct)).Any(x => x.ConnectionType == ConnectionType.InternalApi && x.IsEnabled && !string.IsNullOrWhiteSpace(x.SecretReference))) throw new ConflictException("The target environment has no enabled InternalApi connection with a secret reference.");
     }
-    private static BetaCampaignDto Map(BetaCampaign c) { var active = c.Invitations.Where(i => i.CountsAgainstCapacity()).ToList(); return new(c.Id, c.ProductId, c.EnvironmentId, c.Name, c.Description, c.Status, c.MaxInvitations, c.Invitations.Count, c.Invitations.Count(i => i.Status == BetaInvitationStatus.Pending), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Sent), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Accepted), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Revoked), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Failed), Math.Max(0, c.MaxInvitations - active.Count), c.StartsAtUtc, c.EndsAtUtc, c.CreatedAtUtc, c.UpdatedAtUtc); }
+    private static BetaCampaignDto Map(BetaCampaign c) { var active = c.Invitations.Where(i => i.CountsAgainstCapacity()).ToList(); return new(c.Id, c.ProductId, c.EnvironmentId, c.Name, c.Description, c.EffectiveBetaPlan, c.Status, c.MaxInvitations, c.Invitations.Count, c.Invitations.Count(i => i.Status == BetaInvitationStatus.Pending), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Sent), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Accepted), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Revoked), c.Invitations.Count(i => i.Status == BetaInvitationStatus.Failed), Math.Max(0, c.MaxInvitations - active.Count), c.StartsAtUtc, c.EndsAtUtc, c.CreatedAtUtc, c.UpdatedAtUtc); }
 }
 
 public interface IBetaCampaignService

@@ -2,6 +2,7 @@ namespace Zevoryn.Control.Tests;
 
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Zevoryn.Control.Application.Abstractions;
 using Zevoryn.Control.Application.Services;
@@ -43,6 +44,24 @@ public sealed class CleanersFlowAccessTests
     }
 
     [Fact]
+    public async Task Create_invitation_sends_the_plan_in_the_cleanersflow_json_payload()
+    {
+        var result = await SendAsync(null, null, new Dictionary<string, string?> { ["control"] = "control-value" }, plan: BetaPlan.Growth);
+        using var payload = JsonDocument.Parse(result.Body!);
+        Assert.Equal("user@example.com", payload.RootElement.GetProperty("email").GetString());
+        Assert.Equal("source", payload.RootElement.GetProperty("sourceReference").GetString());
+        Assert.Equal("Growth", payload.RootElement.GetProperty("plan").GetString());
+    }
+
+    [Fact]
+    public async Task Unsupported_cleanersflow_plan_is_rejected_before_request()
+    {
+        var handler = new CaptureHandler();
+        await Assert.ThrowsAsync<ArgumentException>(() => SendAsync(null, null, new Dictionary<string, string?> { ["control"] = "control-value" }, handler, (BetaPlan)99));
+        Assert.False(handler.Called);
+    }
+
+    [Fact]
     public void Product_connection_rejects_single_access_reference()
     {
         var environmentId = Guid.NewGuid();
@@ -51,19 +70,19 @@ public sealed class CleanersFlowAccessTests
         Assert.DoesNotContain("access-id", idException.Message); Assert.DoesNotContain("access-secret", secretException.Message);
     }
 
-    private static async Task<CaptureResponse> SendAsync(string? idReference, string? secretReference, Dictionary<string, string?> values, CaptureHandler? handler = null)
+    private static async Task<CaptureResponse> SendAsync(string? idReference, string? secretReference, Dictionary<string, string?> values, CaptureHandler? handler = null, BetaPlan plan = BetaPlan.Starter)
     {
         var product = Product.Create("CleanersFlow", "cleanersflow"); var environment = ProductEnvironment.Create(product.Id, "Staging", EnvironmentType.Staging, "https://staging.example.test"); var connection = ProductConnection.Create(environment.Id, ConnectionType.InternalApi, "control", idReference, secretReference);
         var productRepository = new SingleProductRepository(product); var environmentRepository = new SingleEnvironmentRepository(environment); var connectionRepository = new SingleConnectionRepository(connection); var secretProvider = new DictionarySecretProvider(values); handler ??= new CaptureHandler();
         var resolver = new CleanersFlowClientResolver(new Factory(handler), productRepository, environmentRepository, connectionRepository, secretProvider, new ConfigurationBuilder().Build());
         var provider = new CleanersFlowBetaInvitationProvider(resolver);
-        await provider.CreateInvitationAsync(new(product.Id, environment.Id, "user@example.com", "source"), CancellationToken.None);
-        return new CaptureResponse(handler.Status, handler.Headers);
+        await provider.CreateInvitationAsync(new(product.Id, environment.Id, "user@example.com", "source", Plan: plan), CancellationToken.None);
+        return new CaptureResponse(handler.Status, handler.Headers, handler.Body);
     }
 
-    private sealed record CaptureResponse(HttpStatusCode Status, HttpHeaders Headers);
+    private sealed record CaptureResponse(HttpStatusCode Status, HttpHeaders Headers, string? Body);
     private sealed class Factory(HttpMessageHandler handler) : IHttpClientFactory { public HttpClient CreateClient(string _) => new(handler); }
-    private sealed class CaptureHandler : HttpMessageHandler { public bool Called; public HttpStatusCode Status = HttpStatusCode.OK; public HttpHeaders Headers = null!; protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken _) { Called = true; var response = new HttpResponseMessage(Status) { Content = new StringContent($"{{\"id\":\"{Guid.NewGuid()}\",\"email\":\"user@example.com\",\"status\":\"Sent\",\"createdAtUtc\":\"2026-01-01T00:00:00Z\",\"expiresAtUtc\":\"2026-01-02T00:00:00Z\"}}") }; foreach (var header in request.Headers) response.Headers.TryAddWithoutValidation(header.Key, header.Value); Headers = request.Headers; return Task.FromResult(response); } }
+    private sealed class CaptureHandler : HttpMessageHandler { public bool Called; public HttpStatusCode Status = HttpStatusCode.OK; public HttpHeaders Headers = null!; public string? Body; protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken _) { Called = true; Body = request.Content is null ? null : await request.Content.ReadAsStringAsync(); var response = new HttpResponseMessage(Status) { Content = new StringContent($"{{\"id\":\"{Guid.NewGuid()}\",\"email\":\"user@example.com\",\"status\":\"Sent\",\"createdAtUtc\":\"2026-01-01T00:00:00Z\",\"expiresAtUtc\":\"2026-01-02T00:00:00Z\"}}") }; foreach (var header in request.Headers) response.Headers.TryAddWithoutValidation(header.Key, header.Value); Headers = request.Headers; return response; } }
     private sealed class DictionarySecretProvider(Dictionary<string, string?> values) : ISecretProvider { public Task<string?> GetSecretAsync(string reference, CancellationToken _) => Task.FromResult(values.GetValueOrDefault(reference)); }
     private sealed class SingleProductRepository(Product product) : IProductRepository { public Task<Product?> GetByIdAsync(Guid id, CancellationToken _) => Task.FromResult<Product?>(id == product.Id ? product : null); public Task<IReadOnlyList<Product>> GetAllAsync(CancellationToken _) => Task.FromResult<IReadOnlyList<Product>>([product]); public Task<Product?> GetByIdForUpdateAsync(Guid id, CancellationToken _) => GetByIdAsync(id, _); public Task<bool> ExistsBySlugAsync(string _, CancellationToken __) => Task.FromResult(false); public Task<bool> ExistsBySlugAsync(string _, Guid __, CancellationToken ___) => Task.FromResult(false); public Task AddAsync(Product _, CancellationToken __) => Task.CompletedTask; public Task SaveChangesAsync(CancellationToken _) => Task.CompletedTask; }
     private sealed class SingleEnvironmentRepository(ProductEnvironment environment) : IProductEnvironmentRepository { public Task<ProductEnvironment?> GetByIdAsync(Guid _, Guid id, CancellationToken __) => Task.FromResult<ProductEnvironment?>(id == environment.Id ? environment : null); public Task<IReadOnlyList<ProductEnvironment>> GetByProductIdAsync(Guid _, CancellationToken __) => Task.FromResult<IReadOnlyList<ProductEnvironment>>([environment]); public Task<ProductEnvironment?> GetByIdForUpdateAsync(Guid a, Guid b, CancellationToken c) => GetByIdAsync(a, b, c); public Task<bool> ExistsByNameAsync(Guid _, string __, CancellationToken ___) => Task.FromResult(false); public Task<bool> ExistsByNameAsync(Guid _, string __, Guid ___, CancellationToken ____) => Task.FromResult(false); public Task AddAsync(ProductEnvironment _, CancellationToken __) => Task.CompletedTask; public Task DeleteAsync(ProductEnvironment _, CancellationToken __) => Task.CompletedTask; public Task SaveChangesAsync(CancellationToken _) => Task.CompletedTask; }
