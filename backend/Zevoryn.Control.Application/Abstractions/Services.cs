@@ -45,7 +45,7 @@ public interface IEnvironmentHealthChecker
     Task<EnvironmentHealthCheckResult> CheckAsync(Guid environmentId, string baseUrl, CancellationToken cancellationToken);
 }
 public sealed record BetaInvitationProviderResult(string? ExternalReference, BetaInvitationStatus Status, string? ErrorCode, string? ErrorMessage, DateTime? CreatedAtUtc = null, DateTime? AcceptedAtUtc = null, DateTime? RevokedAtUtc = null, DateTime? ExpiresAtUtc = null);
-public sealed record BetaInvitationProviderRequest(Guid ProductId, Guid EnvironmentId, string Email, string SourceReference, string? ExternalReference = null);
+public sealed record BetaInvitationProviderRequest(Guid ProductId, Guid EnvironmentId, string Email, string SourceReference, string? ExternalReference = null, BetaPlan Plan = BetaPlan.Starter);
 public interface IBetaInvitationProvider
 {
     Task<BetaInvitationProviderResult> CreateInvitationAsync(BetaInvitationProviderRequest request, CancellationToken cancellationToken);

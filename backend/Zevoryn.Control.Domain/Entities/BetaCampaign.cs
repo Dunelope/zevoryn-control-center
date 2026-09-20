@@ -5,9 +5,9 @@ using Zevoryn.Control.Domain.Enums;
 public sealed class BetaCampaign
 {
     private BetaCampaign() { }
-    private BetaCampaign(Guid id, Guid productId, Guid? environmentId, string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, DateTime nowUtc)
+    private BetaCampaign(Guid id, Guid productId, Guid? environmentId, string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, DateTime nowUtc, BetaPlan betaPlan)
     {
-        Id = id; ProductId = productId; EnvironmentId = environmentId; Name = name; Description = description; MaxInvitations = maxInvitations; StartsAtUtc = startsAtUtc; EndsAtUtc = endsAtUtc; Status = BetaCampaignStatus.Draft; CreatedAtUtc = nowUtc; UpdatedAtUtc = nowUtc;
+        Id = id; ProductId = productId; EnvironmentId = environmentId; Name = name; Description = description; BetaPlan = betaPlan; MaxInvitations = maxInvitations; StartsAtUtc = startsAtUtc; EndsAtUtc = endsAtUtc; Status = BetaCampaignStatus.Draft; CreatedAtUtc = nowUtc; UpdatedAtUtc = nowUtc;
     }
 
     public Guid Id { get; private set; }
@@ -15,6 +15,8 @@ public sealed class BetaCampaign
     public Guid? EnvironmentId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
+    public BetaPlan? BetaPlan { get; private set; }
+    public BetaPlan EffectiveBetaPlan => BetaPlan ?? Domain.Enums.BetaPlan.Starter;
     public BetaCampaignStatus Status { get; private set; }
     public int MaxInvitations { get; private set; }
     public DateTime? StartsAtUtc { get; private set; }
@@ -23,22 +25,24 @@ public sealed class BetaCampaign
     public DateTime UpdatedAtUtc { get; private set; }
     public ICollection<BetaInvitation> Invitations { get; private set; } = new List<BetaInvitation>();
 
-    public static BetaCampaign Create(Guid productId, Guid environmentId, string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, DateTime? nowUtc = null)
+    public static BetaCampaign Create(Guid productId, Guid environmentId, string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, DateTime? nowUtc = null, BetaPlan? betaPlan = null)
     {
         Validate(productId, environmentId, name, maxInvitations, startsAtUtc, endsAtUtc);
-        return new BetaCampaign(Guid.NewGuid(), productId, environmentId, name.Trim(), description?.Trim(), maxInvitations, EnsureUtc(startsAtUtc), EnsureUtc(endsAtUtc), nowUtc ?? DateTime.UtcNow);
+        ValidateBetaPlan(betaPlan);
+        return new BetaCampaign(Guid.NewGuid(), productId, environmentId, name.Trim(), description?.Trim(), maxInvitations, EnsureUtc(startsAtUtc), EnsureUtc(endsAtUtc), nowUtc ?? DateTime.UtcNow, betaPlan ?? Domain.Enums.BetaPlan.Starter);
     }
 
     // Kept for older domain callers; application-level campaign creation always supplies an explicit target.
     public static BetaCampaign Create(Guid productId, string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, DateTime? nowUtc = null) => Create(productId, Guid.NewGuid(), name, description, maxInvitations, startsAtUtc, endsAtUtc, nowUtc);
 
-    public void Update(string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, Guid? environmentId = null)
+    public void Update(string name, string? description, int maxInvitations, DateTime? startsAtUtc, DateTime? endsAtUtc, Guid? environmentId = null, BetaPlan? betaPlan = null)
     {
         if (Status is BetaCampaignStatus.Closed) throw new InvalidOperationException("Closed campaigns cannot be edited.");
         if (environmentId is { } target && target != EnvironmentId && (Status == BetaCampaignStatus.Active || Invitations.Count != 0)) throw new InvalidOperationException("The target environment cannot change after activation or invitation creation.");
         if (environmentId is { } newEnvironment) { ValidateTarget(newEnvironment); EnvironmentId = newEnvironment; }
         Validate(ProductId, EnvironmentId, name, maxInvitations, startsAtUtc, endsAtUtc);
-        Name = name.Trim(); Description = description?.Trim(); MaxInvitations = maxInvitations; StartsAtUtc = EnsureUtc(startsAtUtc); EndsAtUtc = EnsureUtc(endsAtUtc); UpdatedAtUtc = DateTime.UtcNow;
+        ValidateBetaPlan(betaPlan);
+        Name = name.Trim(); Description = description?.Trim(); if (betaPlan is { } selectedPlan) BetaPlan = selectedPlan; MaxInvitations = maxInvitations; StartsAtUtc = EnsureUtc(startsAtUtc); EndsAtUtc = EnsureUtc(endsAtUtc); UpdatedAtUtc = DateTime.UtcNow;
     }
 
     public void Activate() { if (Status is not (BetaCampaignStatus.Draft or BetaCampaignStatus.Paused)) throw new InvalidOperationException("Only draft or paused campaigns can be activated."); Status = BetaCampaignStatus.Active; UpdatedAtUtc = DateTime.UtcNow; }
@@ -55,5 +59,6 @@ public sealed class BetaCampaign
         if (startsAtUtc is { } start && endsAtUtc is { } end && EnsureUtc(end) <= EnsureUtc(start)) throw new ArgumentException("EndsAtUtc must be after StartsAtUtc.", nameof(endsAtUtc));
     }
     private static void ValidateTarget(Guid environmentId) { if (environmentId == Guid.Empty) throw new ArgumentException("Campaign must target an environment.", nameof(environmentId)); }
+    private static void ValidateBetaPlan(BetaPlan? betaPlan) { if (betaPlan is { } value && !Enum.IsDefined(value)) throw new ArgumentException("Unsupported beta plan.", nameof(betaPlan)); }
     private static DateTime? EnsureUtc(DateTime? value) => value is null ? null : value.Value.Kind == DateTimeKind.Utc ? value : value.Value.ToUniversalTime();
 }

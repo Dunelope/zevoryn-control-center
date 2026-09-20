@@ -6,14 +6,16 @@ using Zevoryn.Control.Domain.Enums;
 public sealed class BetaInvitation
 {
     private BetaInvitation() { }
-    private BetaInvitation(Guid id, Guid campaignId, string email, DateTime? expiresAtUtc, DateTime nowUtc)
+    private BetaInvitation(Guid id, Guid campaignId, string email, BetaPlan betaPlan, DateTime? expiresAtUtc, DateTime nowUtc)
     {
-        Id = id; BetaCampaignId = campaignId; Email = email; Status = BetaInvitationStatus.Pending; ExpiresAtUtc = expiresAtUtc; InvitedAtUtc = nowUtc; CreatedAtUtc = nowUtc; UpdatedAtUtc = nowUtc;
+        Id = id; BetaCampaignId = campaignId; Email = email; BetaPlan = betaPlan; Status = BetaInvitationStatus.Pending; ExpiresAtUtc = expiresAtUtc; InvitedAtUtc = nowUtc; CreatedAtUtc = nowUtc; UpdatedAtUtc = nowUtc;
     }
 
     public Guid Id { get; private set; }
     public Guid BetaCampaignId { get; private set; }
     public string Email { get; private set; } = string.Empty;
+    public BetaPlan? BetaPlan { get; private set; }
+    public BetaPlan EffectiveBetaPlan => BetaPlan ?? Domain.Enums.BetaPlan.Starter;
     public BetaInvitationStatus Status { get; private set; }
     public string? ExternalReference { get; private set; }
     public string? ErrorCode { get; private set; }
@@ -26,10 +28,11 @@ public sealed class BetaInvitation
     public DateTime UpdatedAtUtc { get; private set; }
     public BetaCampaign BetaCampaign { get; private set; } = null!;
 
-    public static BetaInvitation Create(Guid campaignId, string email, DateTime? expiresAtUtc, DateTime? nowUtc = null)
+    public static BetaInvitation Create(Guid campaignId, string email, DateTime? expiresAtUtc, DateTime? nowUtc = null, BetaPlan? betaPlan = null)
     {
         if (campaignId == Guid.Empty) throw new ArgumentException("Invitation must belong to a campaign.", nameof(campaignId));
-        return new BetaInvitation(Guid.NewGuid(), campaignId, NormalizeEmail(email), EnsureUtc(expiresAtUtc), nowUtc ?? DateTime.UtcNow);
+        if (betaPlan is { } value && !Enum.IsDefined(value)) throw new ArgumentException("Unsupported beta plan.", nameof(betaPlan));
+        return new BetaInvitation(Guid.NewGuid(), campaignId, NormalizeEmail(email), betaPlan ?? Domain.Enums.BetaPlan.Starter, EnsureUtc(expiresAtUtc), nowUtc ?? DateTime.UtcNow);
     }
 
     public void SetExternalReference(string? externalReference) { ExternalReference = string.IsNullOrWhiteSpace(externalReference) ? null : externalReference.Trim(); UpdatedAtUtc = DateTime.UtcNow; }
